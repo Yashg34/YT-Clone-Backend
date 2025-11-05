@@ -133,7 +133,23 @@ const getVideoById = asyncHandler(async (req, res) => {
                 _id: new mongoose.Types.ObjectId(videoId),
                 $or: [{isPublished: true}, {owner: new mongoose.Types.ObjectId(userId)}]
             }
-        }, 
+        },
+        {
+            $lookup: {
+                from: "likes",
+                localField: "_id",
+                foreignField: "video",
+                as: "likes",
+            }
+        },
+        {
+            $lookup: {
+                from: "subscriptions",
+                localField: "owner",
+                foreignField: "channel",
+                as: "subscribers",
+            }
+        },
         {
             $lookup: {
                 from: "users",
@@ -153,6 +169,18 @@ const getVideoById = asyncHandler(async (req, res) => {
         },
         {
             $unwind: "$owner"
+        },
+        {
+            $addFields: {
+                likesCount: { $size: "$likes" },
+                subscribersCount: { $size: "$subscribers" }
+            }
+        },
+        {
+            $project: {
+                likes: 0,
+                subscribers: 0
+            }
         }
     ])
 
@@ -167,8 +195,29 @@ const getVideoById = asyncHandler(async (req, res) => {
         }
     )
 
+    let updatedUser={};
+    const user = await User.findById(userId).select("watchHistory")
+    const isDuplicate = user && user.watchHistory.length > 0 && user.watchHistory[0].equals(new mongoose.Types.ObjectId(videoId))
+    if(!isDuplicate){
+        updatedUser = await User.findByIdAndUpdate(
+            userId,
+            {
+                $push: {
+                    watchHistory: {
+                        $each: [new mongoose.Types.ObjectId(videoId)],
+                        $position: 0,
+                        $slice: 20
+                    }
+                }
+            },
+            { new: true }
+        ).select("-password");
+    }else{
+        updatedUser=user
+    }
+
     return res.status(200).json(
-        new ApiResponse(200, video[0], "Video fetched successfully")
+        new ApiResponse(200, [video[0], updatedUser], "Video fetched successfully")
     )
 })
 

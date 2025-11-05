@@ -103,7 +103,33 @@ const getChannelVideos = asyncHandler(async (req, res) => {
     )
 })
 
+const engagementStatus = asyncHandler(async (req, res) => {
+    const userId = req.user?._id; 
+    const { videoId, channelId } = req.params; 
+    
+    const userIdObj = new mongoose.Types.ObjectId(userId);
+    const videoIdObj = new mongoose.Types.ObjectId(videoId);
+    const channelIdObj = new mongoose.Types.ObjectId(channelId); 
+
+    const isLikedResult = await Like.exists({
+        likedBy: userIdObj,
+        video: videoIdObj
+    });
+    const isLiked = !!isLikedResult; 
+
+    const isSubscribedResult = await Subscription.exists({
+        subscriber: userIdObj,     
+        channel: channelIdObj 
+    });
+    const isSubscribed = !!isSubscribedResult; 
+
+    return res.status(200).json(
+        new ApiResponse(200, { isLiked, isSubscribed }, "Engagement status fetched successfully")
+    );
+});
+
 export {
     getChannelStats, 
-    getChannelVideos
-    }
+    getChannelVideos,
+    engagementStatus
+}

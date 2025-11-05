@@ -302,6 +302,14 @@ const getUserChannelProfile=asyncHandler( async(req,res)=>{
             }
         },
         {
+            $lookup: {
+                from: "videos",
+                localField: "_id",
+                foreignField: "owner",
+                as: "videos"
+            }
+        },
+        {
             $addFields: {
                 subscribersCount: { $size: "$subscribers" },
                 channelsSubscribedToCount: { $size: "$subscribedTo" },
@@ -326,6 +334,7 @@ const getUserChannelProfile=asyncHandler( async(req,res)=>{
                 avatar: 1,
                 coverImage: 1,
                 email: 1,
+                videos: 1
             }
         }        
     ])
@@ -348,10 +357,15 @@ const getWatchHistory= asyncHandler( async(req,res)=>{
         },{
             $lookup: {
                 from: "videos",
-                localField: "watchHistory.video",
+                localField: "watchHistory",
                 foreignField: "_id",
                 as: "watchHistory",
                 pipeline: [
+                    {
+                        $match: {
+                            isPublished: true
+                        }
+                    },
                     {
                         $lookup: {
                             from: "users",
@@ -374,6 +388,17 @@ const getWatchHistory= asyncHandler( async(req,res)=>{
                             owner: {
                                 $first: "$owner"
                             }
+                        }
+                    },
+                    {
+                        $project: {
+                            _id: 1,
+                            thumbnail: 1,
+                            title: 1,
+                            duration: 1,
+                            views: 1,
+                            createdAt: 1,
+                            owner: 1
                         }
                     }
                 ]

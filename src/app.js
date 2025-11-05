@@ -37,4 +37,7 @@ app.use("/api/v1/likes", likeRouter)
 app.use("/api/v1/dashboard", dashboardRouter)
 app.use("/api/v1/healthCheck", healthCheckRouter)
 
+import { errorMiddleware } from './middlewares/apiError.middleware.js'
+app.use(errorMiddleware)
+
 export { app }
